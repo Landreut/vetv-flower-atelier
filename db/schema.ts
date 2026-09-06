@@ -4,6 +4,7 @@ export const orders = sqliteTable('orders', {
   bouquetId: text('bouquet_id').notNull(),
   bouquetName: text('bouquet_name').notNull(),
   price: integer('price_rub').notNull(),
+  items: text('items_json').notNull().default('[]'),
   name: text('customer_name').notNull(),
   phone: text('phone').notNull(),
   date: text('requested_date'),

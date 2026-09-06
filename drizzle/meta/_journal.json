@@ -8,6 +8,13 @@
       "when": 1788683026669,
       "tag": "0000_material_paladin",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1788683974949,
+      "tag": "0001_worthless_stick",
+      "breakpoints": true
     }
   ]
 }

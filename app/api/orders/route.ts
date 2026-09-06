@@ -11,9 +11,9 @@ export async function POST(request: Request) {
     try { body = JSON.parse(text); } catch { return Response.json({ error: 'Некорректная заявка.' }, { status: 400 }); }
     const validation = validateOrder(body);
     if ('error' in validation) return Response.json({ error: validation.error }, { status: 400 });
-    const { id, bouquet, name, phone, date, wishes } = validation.order;
+    const { id, items, total, name, phone, date, wishes } = validation.order;
     const now = new Date().toISOString();
-    await orderDatabase().prepare('INSERT INTO orders (id, bouquet_id, bouquet_name, price_rub, customer_name, phone, requested_date, wishes, consent_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING').bind(id, bouquet.id, bouquet.name, bouquet.price, name, phone, date, wishes, now, now).run();
+    await orderDatabase().prepare('INSERT INTO orders (id, bouquet_id, bouquet_name, price_rub, items_json, customer_name, phone, requested_date, wishes, consent_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING').bind(id, items[0].id, items[0].name, total, JSON.stringify(items), name, phone, date, wishes, now, now).run();
     return Response.json({ reference: `В-${id.slice(0, 8).toUpperCase()}` }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
   } catch {
     return Response.json({ error: 'Не удалось сохранить заявку. Ваши данные остались в форме — попробуйте ещё раз.' }, { status: 503 });

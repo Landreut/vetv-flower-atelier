@@ -1,0 +1,1 @@
+ALTER TABLE `orders` ADD `items_json` text DEFAULT '[]' NOT NULL;
