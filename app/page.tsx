@@ -97,6 +97,22 @@ export default function Home() {
         </article>)}</div>
         <p className="catalog-note">Цветы живые, поэтому оттенки и раскрытие бутонов могут немного отличаться от фотографии.</p>
       </section>
+      <section id="reviews" className="reviews-section" aria-labelledby="reviews-title">
+        <div className="reviews-layout wrap">
+          <div className="reviews-intro"><p className="eyebrow">ЧТО ГОВОРЯТ ГОСТИ</p><h2 id="reviews-title">Слова,<br /><em>которые остаются.</em></h2><p>Спасибо, что делитесь впечатлениями. Мы читаем каждый отзыв и передаём его флористам.</p><div className="review-controls"><button type="button" onClick={() => moveReview(-1)} aria-label="Предыдущий отзыв"><ChevronUp size={19} /></button><span>{String(reviewIndex + 1).padStart(2, '0')} <i>/</i> {String(reviews.length).padStart(2, '0')}</span><button type="button" onClick={() => moveReview(1)} aria-label="Следующий отзыв"><ChevronDown size={19} /></button></div></div>
+          <div className="reviews-viewport" aria-live="polite"><div className="reviews-track" style={{ transform: `translateY(-${reviewIndex * 100}%)` }}>{reviews.map((review) => <article className="review-card" key={review.name}><div className="review-quote">“</div><blockquote>{review.quote}</blockquote><footer><span className="review-mark">{review.mark}</span><span><strong>{review.name}</strong><small>{review.detail}</small></span></footer></article>)}</div></div>
+        </div>
+      </section>
+      <section id="visit" className="location-section wrap" aria-labelledby="visit-title">
+        <div className="location-copy">
+          <p className="eyebrow"><MapPin size={15} /> НАЙДИТЕ НАС</p>
+          <h2 id="visit-title">Цветы ждут<br /><em>своей встречи.</em></h2>
+          <p className="location-intro">Загляните в мастерскую, чтобы выбрать букет вживую или просто вдохнуть немного свежего воздуха.</p>
+          <div className="location-details"><p><strong>Москва, ул. Остоженка, 18/1</strong><br />Вход со стороны Пожарского переулка</p><p><Clock3 size={15} /> Ежедневно, 09:00—21:00</p></div>
+          <a className="text-link" href="https://www.openstreetmap.org/?mlat=55.7449&mlon=37.5987#map=17/55.7449/37.5987" target="_blank" rel="noreferrer">Открыть маршрут <ExternalLink size={16} /></a>
+        </div>
+        <div className="map-frame"><iframe title="Карта расположения цветочной мастерской «Ветвь»" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=37.588%2C55.737%2C37.608%2C55.752&layer=mapnik&marker=55.7449%2C37.5987" /></div>
+      </section>
       <section id="order" className="order-section" aria-labelledby="order-title"><div className="order-layout wrap">
         <div className="order-story"><p className="eyebrow">ОТ ВЫБОРА — К ЧУВСТВАМ</p><h2 id="order-title">Ваши цветы<br /><em>почти у вас.</em></h2><p className="order-intro">Выберите цветы и оставьте данные<br className="desktop-break" /> для оформления заявки.</p><div className="selection-summary" aria-live="polite"><span className="mini-label">ВАШ ВЫБОР</span>{chosenBouquets.length ? <><ul className="selected-list">{chosenBouquets.map((item) => <li className="selected-preview" key={item.id}><img src={item.image} alt="" width="72" height="80" /><div><h3>{item.name}</h3><p>{money(item.price)}</p></div></li>)}</ul><p className="selection-total"><span>Итого</span><strong>{money(total)}</strong></p></> : <p className="selection-empty">Отметьте один или несколько букетов в анкете.</p>}</div><p className="order-footnote">Оплата на сайте не требуется.<br />Детали получения согласовываются отдельно.</p></div>
         <div className="form-panel">{status === 'success' ? <div className="success-panel" role="status" tabIndex={-1}><span className="success-icon"><Check size={30} /></span><p className="eyebrow">СПАСИБО ЗА ВАШ ВЫБОР</p><h3>Заявка сохранена</h3><p>Ваш номер — <strong>{reference}</strong>.</p><ul className="success-items">{chosenBouquets.map((item) => <li key={item.id}><span>{item.name}</span><span>{money(item.price)}</span></li>)}</ul><p className="selection-total"><span>Итого</span><strong>{money(total)}</strong></p><p className="secondary-text">Заявка ещё не подтверждает дату и условия получения.</p><button className="submit-button" onClick={() => setStatus('idle')} type="button">Вернуться к анкете <ArrowRight size={18} /></button></div> : <form ref={formRef} onSubmit={submit} aria-labelledby="form-title"><h3 id="form-title" className="form-title">Оформить заявку</h3><fieldset disabled={status === 'sending'}>
@@ -109,23 +125,7 @@ export default function Home() {
           <button className="submit-button" type="submit" disabled={status === 'sending'}>{status === 'sending' ? <>Сохраняем заявку <LoaderCircle className="spin" size={19} /></> : <>Оставить заявку <ArrowUpRight size={20} /></>}</button><p className="required-note">* Обязательные поля</p>
         </fieldset></form>}</div>
       </div></section>
-      <section id="visit" className="location-section wrap" aria-labelledby="visit-title">
-        <div className="location-copy">
-          <p className="eyebrow"><MapPin size={15} /> НАЙДИТЕ НАС</p>
-          <h2 id="visit-title">Цветы ждут<br /><em>своей встречи.</em></h2>
-          <p className="location-intro">Загляните в мастерскую, чтобы выбрать букет вживую или просто вдохнуть немного свежего воздуха.</p>
-          <div className="location-details"><p><strong>Москва, ул. Остоженка, 18/1</strong><br />Вход со стороны Пожарского переулка</p><p><Clock3 size={15} /> Ежедневно, 09:00—21:00</p></div>
-          <a className="text-link" href="https://www.openstreetmap.org/?mlat=55.7449&mlon=37.5987#map=17/55.7449/37.5987" target="_blank" rel="noreferrer">Открыть маршрут <ExternalLink size={16} /></a>
-        </div>
-        <div className="map-frame"><iframe title="Карта расположения цветочной мастерской «Ветвь»" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=37.588%2C55.737%2C37.608%2C55.752&layer=mapnik&marker=55.7449%2C37.5987" /></div>
-      </section>
-      <section id="reviews" className="reviews-section" aria-labelledby="reviews-title">
-        <div className="reviews-layout wrap">
-          <div className="reviews-intro"><p className="eyebrow">ЧТО ГОВОРЯТ ГОСТИ</p><h2 id="reviews-title">Слова,<br /><em>которые остаются.</em></h2><p>Спасибо, что делитесь впечатлениями. Мы читаем каждый отзыв и передаём его флористам.</p><div className="review-controls"><button type="button" onClick={() => moveReview(-1)} aria-label="Предыдущий отзыв"><ChevronUp size={19} /></button><span>{String(reviewIndex + 1).padStart(2, '0')} <i>/</i> {String(reviews.length).padStart(2, '0')}</span><button type="button" onClick={() => moveReview(1)} aria-label="Следующий отзыв"><ChevronDown size={19} /></button></div></div>
-          <div className="reviews-viewport" aria-live="polite"><div className="reviews-track" style={{ transform: `translateY(-${reviewIndex * 100}%)` }}>{reviews.map((review) => <article className="review-card" key={review.name}><div className="review-quote">“</div><blockquote>{review.quote}</blockquote><footer><span className="review-mark">{review.mark}</span><span><strong>{review.name}</strong><small>{review.detail}</small></span></footer></article>)}</div></div>
-        </div>
-      </section>
     </main>
-    <footer className="wrap site-footer"><a className="footer-brand" href="#">ветвь<span>Цветы ближе, чем кажется.</span></a><p>Авторские букеты, собранные с вниманием.</p><a href="#catalog">К коллекции <ArrowUpRight size={16} /></a></footer>
+    <footer className="wrap site-footer"><a className="footer-brand" href="#">ветвь<span>Цветы ближе, чем кажется.</span></a><p>Авторские букеты, собранные с вниманием.</p><div className="footer-socials" aria-label="Социальные сети"><button type="button" className="footer-social" aria-label="ВКонтакте" title="ВКонтакте">VK</button><button type="button" className="footer-social" aria-label="Телеграм" title="Телеграм">TG</button><button type="button" className="footer-social" aria-label="Одноклассники" title="Одноклассники">OK</button><button type="button" className="footer-social" aria-label="WhatsApp" title="WhatsApp">WA</button></div><a href="#catalog">К коллекции <ArrowUpRight size={16} /></a></footer>
   </>;
 }
