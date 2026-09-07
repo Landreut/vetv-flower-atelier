@@ -28,11 +28,13 @@ export default function Home() {
   const catalogViewportRef = useRef<HTMLDivElement>(null);
   const catalogDragging = useRef(false);
   const catalogDragStartX = useRef(0);
+  const catalogDragStartY = useRef(0);
   const catalogDragStartScroll = useRef(0);
   const catalogDragMoved = useRef(false);
   const catalogDirection = useRef(1);
   const catalogPaused = useRef(false);
   const catalogResumeTimer = useRef<number | undefined>(undefined);
+  const [catalogProgress, setCatalogProgress] = useState(0);
   const chosenBouquets = bouquets.filter((item) => selected.includes(item.id));
   const total = chosenBouquets.reduce((sum, item) => sum + item.price, 0);
   const [today, setToday] = useState('');
@@ -59,6 +61,18 @@ export default function Home() {
     frame = window.requestAnimationFrame(drift);
     return () => window.cancelAnimationFrame(frame);
   }, []);
+  useEffect(() => {
+    const viewport = catalogViewportRef.current;
+    if (!viewport) return;
+    const updateProgress = () => {
+      const maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+      setCatalogProgress(maxScroll ? Math.min(100, Math.max(0, (viewport.scrollLeft / maxScroll) * 100)) : 0);
+    };
+    updateProgress();
+    viewport.addEventListener('scroll', updateProgress, { passive: true });
+    window.addEventListener('resize', updateProgress);
+    return () => { viewport.removeEventListener('scroll', updateProgress); window.removeEventListener('resize', updateProgress); };
+  }, [bouquets.length]);
   function pauseCatalog() {
     catalogPaused.current = true;
   }
@@ -71,6 +85,7 @@ export default function Home() {
     catalogDragging.current = true;
     catalogDragMoved.current = false;
     catalogDragStartX.current = event.clientX;
+    catalogDragStartY.current = event.clientY;
     catalogDragStartScroll.current = viewport.scrollLeft;
     catalogPaused.current = true;
     viewport.classList.add('is-dragging');
@@ -81,6 +96,13 @@ export default function Home() {
     const viewport = catalogViewportRef.current;
     if (!viewport) return;
     const delta = event.clientX - catalogDragStartX.current;
+    const verticalDelta = event.clientY - catalogDragStartY.current;
+    if (!catalogDragMoved.current && Math.abs(verticalDelta) > 5 && Math.abs(verticalDelta) > Math.abs(delta)) {
+      catalogDragging.current = false;
+      catalogPaused.current = false;
+      if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
+      return;
+    }
     if (Math.abs(delta) > 5) catalogDragMoved.current = true;
     if (catalogDragMoved.current) {
       event.preventDefault();
@@ -98,11 +120,20 @@ export default function Home() {
   function scrollCatalogWithWheel(event: ReactWheelEvent<HTMLDivElement>) {
     const viewport = catalogViewportRef.current;
     if (!viewport || viewport.scrollWidth <= viewport.clientWidth) return;
-    const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
-    if (!delta) return;
+    if (!event.deltaX || Math.abs(event.deltaX) <= Math.abs(event.deltaY)) return;
+    const delta = event.deltaX;
     event.preventDefault();
     viewport.scrollLeft += delta;
     catalogPaused.current = true;
+    window.clearTimeout(catalogResumeTimer.current);
+    catalogResumeTimer.current = window.setTimeout(resumeCatalog, 1400);
+  }
+  function scrubCatalog(value: number) {
+    const viewport = catalogViewportRef.current;
+    if (!viewport) return;
+    const maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+    catalogPaused.current = true;
+    viewport.scrollLeft = maxScroll * (value / 100);
     window.clearTimeout(catalogResumeTimer.current);
     catalogResumeTimer.current = window.setTimeout(resumeCatalog, 1400);
   }
@@ -183,6 +214,7 @@ export default function Home() {
         </article>)}
           </div>
         </div>
+        <div className="catalog-slider-row"><span className="catalog-slider-label">Листайте коллекцию</span><input className="catalog-slider" type="range" min="0" max="100" step="0.1" value={catalogProgress} onChange={(event) => scrubCatalog(Number(event.target.value))} aria-label="Прокрутка каталога букетов" aria-valuetext={`${Math.round(catalogProgress)} процентов`} /><span className="catalog-slider-value" aria-hidden="true">{String(Math.round(catalogProgress)).padStart(2, '0')}%</span></div>
         <p className="catalog-note">Цветы живые, поэтому оттенки и раскрытие бутонов могут немного отличаться от фотографии.</p>
       </section>
       <section id="reviews" className="reviews-section" aria-labelledby="reviews-title">
