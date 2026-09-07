@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react';
 import { flushSync } from 'react-dom';
 import { ArrowDown, ArrowUpRight, ArrowRight, Check, ChevronDown, ChevronUp, Clock3, ExternalLink, LoaderCircle, MapPin } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -25,22 +25,106 @@ export default function Home() {
   const requestPayload = useRef('');
   const sending = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const catalogViewportRef = useRef<HTMLDivElement>(null);
+  const catalogDragging = useRef(false);
+  const catalogDragStartX = useRef(0);
+  const catalogDragStartScroll = useRef(0);
+  const catalogDragMoved = useRef(false);
+  const catalogDirection = useRef(1);
+  const catalogPaused = useRef(false);
+  const catalogResumeTimer = useRef<number | undefined>(undefined);
   const chosenBouquets = bouquets.filter((item) => selected.includes(item.id));
   const total = chosenBouquets.reduce((sum, item) => sum + item.price, 0);
   const [today, setToday] = useState('');
   useEffect(() => { const now = new Date(); setToday(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`); }, []);
+  useEffect(() => {
+    const viewport = catalogViewportRef.current;
+    if (!viewport) return;
+    let frame = 0;
+    let previous = performance.now();
+    const drift = (now: number) => {
+      const elapsed = now - previous;
+      previous = now;
+      if (!catalogPaused.current && !catalogDragging.current && document.visibilityState === 'visible') {
+        const maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+        if (maxScroll > 1) {
+          let next = viewport.scrollLeft + catalogDirection.current * elapsed * 0.008;
+          if (next >= maxScroll) { next = maxScroll; catalogDirection.current = -1; }
+          if (next <= 0) { next = 0; catalogDirection.current = 1; }
+          viewport.scrollLeft = next;
+        }
+      }
+      frame = window.requestAnimationFrame(drift);
+    };
+    frame = window.requestAnimationFrame(drift);
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+  function pauseCatalog() {
+    catalogPaused.current = true;
+  }
+  function resumeCatalog() {
+    if (!catalogDragging.current) catalogPaused.current = false;
+  }
+  function beginCatalogDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    const viewport = catalogViewportRef.current;
+    if (!viewport) return;
+    catalogDragging.current = true;
+    catalogDragMoved.current = false;
+    catalogDragStartX.current = event.clientX;
+    catalogDragStartScroll.current = viewport.scrollLeft;
+    catalogPaused.current = true;
+    viewport.classList.add('is-dragging');
+    viewport.setPointerCapture(event.pointerId);
+  }
+  function moveCatalogDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    if (!catalogDragging.current) return;
+    const viewport = catalogViewportRef.current;
+    if (!viewport) return;
+    const delta = event.clientX - catalogDragStartX.current;
+    if (Math.abs(delta) > 5) catalogDragMoved.current = true;
+    if (catalogDragMoved.current) {
+      event.preventDefault();
+      viewport.scrollLeft = catalogDragStartScroll.current - delta;
+    }
+  }
+  function endCatalogDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    const viewport = catalogViewportRef.current;
+    if (viewport?.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
+    catalogDragging.current = false;
+    if (viewport) viewport.classList.remove('is-dragging');
+    window.clearTimeout(catalogResumeTimer.current);
+    catalogResumeTimer.current = window.setTimeout(resumeCatalog, 900);
+  }
+  function scrollCatalogWithWheel(event: ReactWheelEvent<HTMLDivElement>) {
+    const viewport = catalogViewportRef.current;
+    if (!viewport || viewport.scrollWidth <= viewport.clientWidth) return;
+    const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+    if (!delta) return;
+    event.preventDefault();
+    viewport.scrollLeft += delta;
+    catalogPaused.current = true;
+    window.clearTimeout(catalogResumeTimer.current);
+    catalogResumeTimer.current = window.setTimeout(resumeCatalog, 1400);
+  }
+  function preventClickAfterCatalogDrag(event: ReactMouseEvent<HTMLDivElement>) {
+    if (catalogDragMoved.current) {
+      event.preventDefault();
+      event.stopPropagation();
+      catalogDragMoved.current = false;
+    }
+  }
   useEffect(() => {
     const context = (document as Document & { modelContext?: { registerTool: (tool: unknown, options: { signal: AbortSignal }) => void | Promise<void> } }).modelContext;
     if (!context?.registerTool) return;
     const lifecycle = new AbortController();
     const options = { signal: lifecycle.signal };
     const register = async () => {
-      await context.registerTool({ name: 'list_bouquets', title: 'Коллекция букетов', description: 'Read the six available bouquet designs and their prices in rubles.', inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true }, execute: () => bouquets.map(({ id, name, price, description }) => ({ id, name, price, currency: 'RUB', description })) }, options);
+      await context.registerTool({ name: 'list_bouquets', title: 'Коллекция букетов', description: 'Read the fourteen available bouquet designs and their prices in rubles.', inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true }, execute: () => bouquets.map(({ id, name, price, description }) => ({ id, name, price, currency: 'RUB', description })) }, options);
       if (lifecycle.signal.aborted) return;
       await context.registerTool({ name: 'select_bouquets_for_order', title: 'Выбрать букеты для заявки', description: 'Set one or more distinct bouquets in the visible order form and navigate to it. Does not submit or save an order.', inputSchema: { type: 'object', properties: { bouquetIds: { type: 'array', minItems: 1, maxItems: bouquets.length, uniqueItems: true, items: { type: 'string', enum: bouquets.map((item) => item.id) } } }, required: ['bouquetIds'], additionalProperties: false }, annotations: { readOnlyHint: false }, execute: (input: unknown) => {
         if (sending.current) throw new Error('Дождитесь сохранения текущей заявки.');
         const ids = input && typeof input === 'object' ? (input as { bouquetIds?: unknown }).bouquetIds : undefined;
-        if (!Array.isArray(ids) || !ids.length || ids.length > bouquets.length || new Set(ids).size !== ids.length || ids.some((id) => !bouquets.some((item) => item.id === id))) throw new Error('Выберите от одного до шести разных букетов из коллекции.');
+        if (!Array.isArray(ids) || !ids.length || ids.length > bouquets.length || new Set(ids).size !== ids.length || ids.some((id) => !bouquets.some((item) => item.id === id))) throw new Error(`Выберите от одного до ${bouquets.length} разных букетов из коллекции.`);
         const items = bouquets.filter((item) => ids.includes(item.id));
         flushSync(() => { setSelected(items.map((item) => item.id)); setStatus((current) => current === 'success' ? 'idle' : current); });
         document.getElementById('order')?.scrollIntoView();
@@ -90,11 +174,15 @@ export default function Home() {
     <main>
       <section className="intro wrap" aria-labelledby="intro-title"><div><p className="eyebrow"><span className="small-dot" /> АВТОРСКИЕ БУКЕТЫ</p><h1 id="intro-title">Маленький жест.<br /><em>Большие чувства.</em></h1></div><div className="intro-note"><p>Для особенного человека.<br />Для важного момента.<br />И просто так.</p><a className="text-link" href="#catalog">Найти свой букет <ArrowDown size={17} /></a></div></section>
       <section id="catalog" className="catalog wrap" aria-labelledby="catalog-title">
-        <div className="section-heading"><h2 id="catalog-title">Наша коллекция <span>06</span></h2><p>Каждый букет — маленькая история</p></div>
-        <div className="product-grid">{bouquets.map((item, index) => <article className="product" key={item.id}>
+        <div className="section-heading"><h2 id="catalog-title">Наша коллекция <span>{String(bouquets.length).padStart(2, '0')}</span></h2><p>Каждый букет — маленькая история</p></div>
+        <div className="product-carousel-viewport" ref={catalogViewportRef} onPointerEnter={pauseCatalog} onPointerLeave={resumeCatalog} onPointerDown={beginCatalogDrag} onPointerMove={moveCatalogDrag} onPointerUp={endCatalogDrag} onPointerCancel={endCatalogDrag} onWheel={scrollCatalogWithWheel} onClickCapture={preventClickAfterCatalogDrag} role="region" aria-roledescription="карусель" aria-label="Каталог букетов">
+          <div className="product-grid">
+          {bouquets.map((item, index) => <article className="product" key={item.id}>
           <button type="button" className="product-image-button" onClick={() => choose(item.id)} aria-label={`Выбрать букет «${item.name}», ${money(item.price)}`}><img className="product-image" src={item.image} alt={item.alt} width="768" height="768" loading={index < 3 ? 'eager' : 'lazy'} />{index === 1 && <span className="product-label">Выбор флориста</span>}<span className="image-action" aria-hidden="true"><ArrowUpRight size={21} /></span></button>
           <div className="product-title"><h3>{item.name}</h3><span>{money(item.price)}</span></div><p className="product-description">{item.description}</p>
-        </article>)}</div>
+        </article>)}
+          </div>
+        </div>
         <p className="catalog-note">Цветы живые, поэтому оттенки и раскрытие бутонов могут немного отличаться от фотографии.</p>
       </section>
       <section id="reviews" className="reviews-section" aria-labelledby="reviews-title">
