@@ -17,6 +17,7 @@ const reviews = [
 export default function Home() {
   const [selected, setSelected] = useState<string[]>([]);
   const [consent, setConsent] = useState(false);
+  const [mapActive, setMapActive] = useState(false);
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
   const [error, setError] = useState('');
   const [reference, setReference] = useState('');
@@ -50,7 +51,7 @@ export default function Home() {
       if (!catalogPaused.current && !catalogDragging.current && document.visibilityState === 'visible') {
         const maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
         if (maxScroll > 1) {
-          let next = viewport.scrollLeft + catalogDirection.current * elapsed * 0.008;
+          let next = viewport.scrollLeft + catalogDirection.current * elapsed * 0.012;
           if (next >= maxScroll) { next = maxScroll; catalogDirection.current = -1; }
           if (next <= 0) { next = 0; catalogDirection.current = 1; }
           viewport.scrollLeft = next;
@@ -231,7 +232,7 @@ export default function Home() {
           <div className="location-details"><p><strong>Москва, ул. Остоженка, 18/1</strong><br />Вход со стороны Пожарского переулка</p><p><Clock3 size={15} /> Ежедневно, 09:00—21:00</p></div>
           <a className="text-link" href="https://www.openstreetmap.org/?mlat=55.7449&mlon=37.5987#map=17/55.7449/37.5987" target="_blank" rel="noreferrer">Открыть маршрут <ExternalLink size={16} /></a>
         </div>
-        <div className="map-frame"><iframe title="Карта расположения цветочной мастерской «Ветвь»" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=37.588%2C55.737%2C37.608%2C55.752&layer=mapnik&marker=55.7449%2C37.5987" /></div>
+        <div className={`map-frame${mapActive ? ' is-active' : ''}`}><iframe title="Карта расположения цветочной мастерской «Ветвь»" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=37.588%2C55.737%2C37.608%2C55.752&layer=mapnik&marker=55.7449%2C37.5987" />{mapActive ? <button type="button" className="map-deactivate" onClick={() => setMapActive(false)}>Вернуть обычную прокрутку</button> : <button type="button" className="map-activate" onClick={() => setMapActive(true)}><span>Нажмите, чтобы взаимодействовать с картой</span></button>}</div>
       </section>
       <section id="order" className="order-section" aria-labelledby="order-title"><div className="order-layout wrap">
         <div className="order-story"><p className="eyebrow">ОТ ВЫБОРА — К ЧУВСТВАМ</p><h2 id="order-title">Ваши цветы<br /><em>почти у вас.</em></h2><p className="order-intro">Выберите цветы и оставьте данные<br className="desktop-break" /> для оформления заявки.</p><div className="selection-summary" aria-live="polite"><span className="mini-label">ВАШ ВЫБОР</span>{chosenBouquets.length ? <><ul className="selected-list">{chosenBouquets.map((item) => <li className="selected-preview" key={item.id}><img src={item.image} alt="" width="72" height="80" /><div><h3>{item.name}</h3><p>{money(item.price)}</p></div></li>)}</ul><p className="selection-total"><span>Итого</span><strong>{money(total)}</strong></p></> : <p className="selection-empty">Отметьте один или несколько букетов в анкете.</p>}</div><p className="order-footnote">Оплата на сайте не требуется.<br />Детали получения согласовываются отдельно.</p></div>
