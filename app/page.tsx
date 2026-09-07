@@ -33,6 +33,7 @@ export default function Home() {
   const catalogDragStartScroll = useRef(0);
   const catalogDragMoved = useRef(false);
   const catalogDirection = useRef(1);
+  const catalogScrollPosition = useRef(0);
   const catalogPaused = useRef(false);
   const catalogResumeTimer = useRef<number | undefined>(undefined);
   const [catalogProgress, setCatalogProgress] = useState(0);
@@ -51,9 +52,13 @@ export default function Home() {
       if (!catalogPaused.current && !catalogDragging.current && document.visibilityState === 'visible') {
         const maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
         if (maxScroll > 1) {
-          let next = viewport.scrollLeft + catalogDirection.current * elapsed * 0.012;
+          if (Math.abs(viewport.scrollLeft - catalogScrollPosition.current) > 1) {
+            catalogScrollPosition.current = viewport.scrollLeft;
+          }
+          let next = catalogScrollPosition.current + catalogDirection.current * elapsed * 0.012;
           if (next >= maxScroll) { next = maxScroll; catalogDirection.current = -1; }
           if (next <= 0) { next = 0; catalogDirection.current = 1; }
+          catalogScrollPosition.current = next;
           viewport.scrollLeft = next;
         }
       }
@@ -85,6 +90,7 @@ export default function Home() {
     catalogDragStartX.current = event.clientX;
     catalogDragStartY.current = event.clientY;
     catalogDragStartScroll.current = viewport.scrollLeft;
+    catalogScrollPosition.current = viewport.scrollLeft;
     catalogPaused.current = true;
     viewport.classList.add('is-dragging');
     viewport.setPointerCapture(event.pointerId);
@@ -105,6 +111,7 @@ export default function Home() {
     if (catalogDragMoved.current) {
       event.preventDefault();
       viewport.scrollLeft = catalogDragStartScroll.current - delta;
+      catalogScrollPosition.current = viewport.scrollLeft;
     }
   }
   function endCatalogDrag(event: ReactPointerEvent<HTMLDivElement>) {
@@ -122,6 +129,7 @@ export default function Home() {
     const delta = event.deltaX;
     event.preventDefault();
     viewport.scrollLeft += delta;
+    catalogScrollPosition.current = viewport.scrollLeft;
     catalogPaused.current = true;
     window.clearTimeout(catalogResumeTimer.current);
     catalogResumeTimer.current = window.setTimeout(resumeCatalog, 1400);
@@ -132,6 +140,7 @@ export default function Home() {
     const maxScroll = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
     catalogPaused.current = true;
     viewport.scrollLeft = maxScroll * (value / 100);
+    catalogScrollPosition.current = viewport.scrollLeft;
     window.clearTimeout(catalogResumeTimer.current);
     catalogResumeTimer.current = window.setTimeout(resumeCatalog, 1400);
   }
